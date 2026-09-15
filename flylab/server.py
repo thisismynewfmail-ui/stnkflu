@@ -268,9 +268,11 @@ def build_app(settings=None):
         if not settings_module.is_loopback(client):
             if not current.lan_enabled:
                 return JSONResponse(
-                    {"error": "Local-network access is off.",
-                     "detail": "Turn on 'Reachable on this network' in Settings on the"
-                               " machine running FLYLAB, then reload this page."},
+                    {"error": "This FLYLAB is set to local only.",
+                     "detail": "It was started with --local-only, or network sharing"
+                               " was turned off in Settings. Turn on 'Share on this"
+                               " network' on the machine running it, or restart it"
+                               " without --local-only."},
                     status_code=403,
                 )
             if current.lan_require_key:
@@ -350,10 +352,14 @@ def build_app(settings=None):
         current = service.settings
         changed_network = False
         for key, value in body.items():
-            if not hasattr(current, key) or key in ("workspace",):
+            if not hasattr(current, key) or key in ("workspace", "version"):
                 continue
             if key in ("lan_enabled", "lan_require_key", "port"):
                 changed_network = changed_network or getattr(current, key) != value
+            if key in ("lan_enabled", "lan_require_key"):
+                # Someone set this by hand, so it outlives any later change to
+                # the shipped default.
+                current.network_chosen = True
             setattr(current, key, value)
         if body.get("regenerate_key"):
             current.access_key = ""
@@ -367,8 +373,8 @@ def build_app(settings=None):
         return ok({
             "settings": current.json(),
             "restart_required": changed_network,
-            "note": "Network changes take effect for new connections immediately;"
-                    " the listening address itself changes when FLYLAB restarts."
+            "note": "In force for every request from now on. The port and the"
+                    " listening address itself only change when FLYLAB restarts."
             if changed_network else "",
         })
 

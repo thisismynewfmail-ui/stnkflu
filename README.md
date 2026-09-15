@@ -19,7 +19,7 @@ pip install -r requirements.txt
 python3 startup.py
 ```
 
-`startup.py` checks the machine, reports anything missing in plain language, starts the interface at **http://127.0.0.1:8765/** and opens a browser. `python3 startup.py --check` runs the checks and stops.
+`startup.py` checks the machine, reports anything missing in plain language, starts the interface and opens a browser. It listens on port **8765** on every interface, so it is reachable both at `http://127.0.0.1:8765/` and at this machine's own address on your network — the banner prints both. See [over the network](#over-the-network) before putting it somewhere you do not control. `python3 startup.py --check` runs the checks and stops.
 
 To try the software before downloading 1.1 GB, `python3 startup.py --fixture` builds a small randomly wired test graph with the same shape. Everything works; every number it produces is labelled synthetic, because it is.
 
@@ -51,15 +51,29 @@ A channel that is absent from the loaded dataset is reported as absent. A device
 
 ## Over the network
 
-The interface is local-only by default. **Settings → Reachable on this network** binds it for other devices and generates an access key, which is required unless you turn that off. Both the socket binding and a per-request check enforce the current setting.
+**FLYLAB is shared on your local network by default.** It listens on every interface, and the start-up banner prints the address to open from a phone or another computer:
 
-Think about it before turning it on: this interface can drive GPIO pins, move the pointer and start programs on the machine hosting it.
+```
+  Open from any device on this network:
+      http://192.168.1.42:8765/
+  On this machine:  http://127.0.0.1:8765/
+```
+
+That is the useful default for the machine this usually runs on — a headless Raspberry Pi wired to a robot, driven from a laptop across the room. It is also a real exposure: **no access key is required, and this interface can drive GPIO pins, move the pointer and start programs on the host.** Anyone who can reach that address can do those things.
+
+Two ways to close it down, both enforced at the socket *and* on every request:
 
 ```sh
-python3 startup.py --lan          # reachable from this network, key required
+python3 startup.py --local-only   # bind loopback; refuse everything else
+python3 startup.py --key          # stay shared, but require a key in the address
+```
+
+Settings → *Who can reach this interface* does the same thing while it is running, shows the address to share, and copies it to the clipboard. Switching to local-only locks out remote devices immediately, without a restart.
+
+```sh
 python3 -m flylab devices         # what hardware this machine can reach
 python3 -m flylab verify          # re-check a prepared dataset
-python3 -m pytest -q              # 112 tests, no dataset needed
+python3 -m pytest -q              # 119 tests, no dataset needed
 ```
 
 The repository ships no data and contacts no service on your behalf. Projects, models and settings live in `~/.flylab` as plain JSON beside their files.

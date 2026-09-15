@@ -1326,50 +1326,75 @@ FL.views.settings = {
     const right = el('div', { class: 'grid' });
 
     /* --- network access */
-    const urls = el('div', { class: 'mono', style: 'font-size:11.5px;margin-top:8px' },
-      (settings.urls || []).map((url) => el('div', {}, el('a', { href: url, target: '_blank', rel: 'noreferrer', text: url }))));
+    const copy = (url) => navigator.clipboard.writeText(url).then(
+      () => FL.toast('Copied', url, 'good'), () => FL.toast('Could not copy', url, 'bad'));
+    const share = settings.share_url;
+    const addressPanel = el('div', {});
+    if (settings.lan_enabled && share) {
+      addressPanel.append(
+        el('div', { class: 'note good' },
+          el('b', { text: 'Open from any device on this network: ' }),
+          el('a', { href: share, target: '_blank', rel: 'noreferrer', class: 'mono', text: share })),
+        el('div', { class: 'row', style: 'margin-bottom:8px' },
+          tipButton('Copy address', { title: 'Copy the address to share', body: 'Copies the full address, including the access key if one is required, ready to paste into a browser on a phone or another computer.' },
+            () => copy(share), 'primary small'),
+          ...(settings.addresses || []).slice(1).map((address) => FL.tipify(
+            el('span', { class: 'chip', style: 'cursor:pointer',
+              text: `${address}:${settings.port}`,
+              onclick: () => copy(`http://${address}:${settings.port}/${settings.access_key && settings.lan_require_key ? `?key=${settings.access_key}` : ''}`) }),
+            { title: 'Another address for this machine', body: 'This machine answers on more than one interface. Click to copy this one instead.' }))));
+    } else if (settings.lan_enabled) {
+      addressPanel.append(el('div', { class: 'note warn' },
+        'Listening on every interface, but no network address could be found for this machine. It may not be attached to a network yet.'));
+    } else {
+      addressPanel.append(el('div', { class: 'note' },
+        'Local only. Nothing outside this machine can connect, whatever address it tries.'));
+    }
+
     left.append(FL.panel('Who can reach this interface', el('div', {},
+      addressPanel,
       FL.field({
-        label: 'Reachable on this network', kind: 'bool', value: settings.lan_enabled,
-        plain: 'Let other devices on your local network open this interface',
-        tip: 'Off means only this computer can open it. On means any device that can reach this machine can, which is what you want for a headless Raspberry Pi and what you should think about before turning on anywhere else.',
+        label: 'Share on this network', kind: 'bool', value: settings.lan_enabled,
+        plain: 'Listen on every interface, so other devices can open this interface at this machine’s address',
+        tip: 'On by default, because the usual place to run FLYLAB is a headless Raspberry Pi or a workshop machine driven from a laptop. Off binds loopback only, and every request from anywhere else is refused.',
         onchange: async (v) => {
-          if (v && !await FL.confirm('Allow network access?',
-            'Anyone who can reach this machine on the network will be able to open this interface. It can drive GPIO pins, move the pointer and start programs here. An access key is generated and required by default.',
-            'Turn on network access', 'primary')) { this.show(); return; }
+          if (!v && !await FL.confirm('Keep this to this machine only?',
+            'Other devices will be locked out immediately, and FLYLAB will bind loopback only the next time it starts. Anything you are running from a phone or another computer will stop working.',
+            'Local only', 'danger')) { this.show(); return; }
           await save({ lan_enabled: v }); this.show();
         },
       }),
       FL.field({
         label: 'Require an access key', kind: 'bool', value: settings.lan_require_key,
-        plain: 'Devices on the network must present the key in the address',
-        tip: 'Strongly recommended. Without it, anything that can reach this port has full control of this interface. Loopback connections from this machine never need the key.',
+        plain: 'Devices on the network must carry a key in the address',
+        tip: 'Off by default, so the address just works. Turn it on for a network you do not control. Connections from this machine itself never need the key. It is a single shared secret over plain HTTP: appropriate for a workshop network and nothing more.',
         onchange: async (v) => { await save({ lan_require_key: v }); this.show(); },
       }),
       settings.lan_enabled && settings.lan_require_key ? el('div', {},
         el('div', { class: 'note warn' }, el('b', { text: 'Access key: ' }),
           el('span', { class: 'mono', text: settings.access_key })),
         el('div', { class: 'row' },
-          tipButton('Copy address', { title: 'Copy the network address', body: 'Copies the full address including the key, ready to paste into a browser on another device.' },
-            () => {
-              const url = (settings.urls || []).find((u) => !u.includes('127.0.0.1')) || settings.urls[0];
-              navigator.clipboard.writeText(url).then(() => FL.toast('Copied', url, 'good'), () => FL.toast('Could not copy', url, 'bad'));
-            }, 'ghost small'),
           tipButton('New key', { title: 'Replace the access key', body: 'Generates a new one. Every device using the old address stops working immediately.' },
             async () => {
               if (await FL.confirm('Replace the access key?', 'Any device using the old address will be locked out until you give it the new one.', 'Replace key')) {
                 await save({ regenerate_key: true }); this.show();
               }
             }, 'danger small'))) : null,
+      settings.open_to_network ? el('div', { class: 'note warn' },
+        el('b', { text: 'No access key is required. ' }),
+        'Anyone who can reach this machine on the network can open this interface, and it can drive GPIO pins, move the pointer and start programs here.') : null,
       FL.field({
         label: 'Port', kind: 'number', min: 1, max: 65535, step: 1, value: settings.port,
         plain: 'Which port to listen on', tip: 'Takes effect when FLYLAB restarts. 8765 by default.',
         onchange: (v) => save({ port: v }),
       }),
-      urls,
+      el('div', { class: 'mono', style: 'font-size:11.5px;margin-top:8px' },
+        (settings.urls || []).map((url) => el('div', {},
+          el('a', { href: url, target: '_blank', rel: 'noreferrer', text: url })))),
       el('div', { class: 'note' }, el('b', { text: 'How this is enforced: ' }),
-        'the listening address follows this setting when FLYLAB starts, and every request and socket is checked against it again as it arrives. Turning network access off locks out remote devices immediately, without a restart.')),
-      { accent: settings.lan_enabled ? 'accent-amber' : '', tag: settings.lan_enabled ? 'on this network' : 'local only' }));
+        'the listening address follows this setting when FLYLAB starts, and every request and socket is checked against the current setting again as it arrives. Switching to local only locks out remote devices immediately, without a restart.')),
+      { accent: settings.open_to_network ? 'accent-amber' : '',
+        tag: settings.lan_enabled ? (settings.lan_require_key ? 'shared, key required' : 'shared, open') : 'local only' }));
 
     /* --- session defaults */
     left.append(FL.panel('Network defaults', el('div', {},

@@ -19,18 +19,65 @@ def client(tmp_path, fixture_root):
 
 
 # ------------------------------------------------------------------ settings
-def test_local_only_is_the_default():
-    settings = settings_module.AppSettings()
-    assert settings.lan_enabled is False
+def test_sharing_on_the_network_is_the_default():
+    settings = settings_module.AppSettings().validate()
+    assert settings.lan_enabled is True
+    assert settings.lan_require_key is False
+    assert settings.open_to_network is True
+    # Every interface, which is what makes it reachable at this machine's own
+    # address as well as at loopback.
+    assert settings.host == "0.0.0.0"
+    assert settings.access_key == ""
+    assert f"http://127.0.0.1:{settings.port}/" in settings.urls()
+
+
+def test_the_shareable_address_is_this_machine_not_loopback():
+    settings = settings_module.AppSettings().validate()
+    share = settings.share_url()
+    if not settings_module.local_addresses():
+        assert share is None  # a machine with no network attached
+        return
+    assert share and "127.0.0.1" not in share
+    assert share == settings.urls()[0]
+    assert share.endswith(f":{settings.port}/")
+
+
+def test_local_only_hides_every_address_but_loopback():
+    settings = settings_module.AppSettings(lan_enabled=False).validate()
     assert settings.host == "127.0.0.1"
     assert settings.urls() == [f"http://127.0.0.1:{settings.port}/"]
+    assert settings.share_url() is None
+    assert settings.open_to_network is False
 
 
-def test_turning_on_network_access_generates_a_key():
-    settings = settings_module.AppSettings(lan_enabled=True).validate()
-    assert settings.host == "0.0.0.0"
+def test_asking_for_a_key_generates_one_and_puts_it_in_the_address():
+    settings = settings_module.AppSettings(lan_require_key=True).validate()
     assert len(settings.access_key) >= 20
-    assert any("key=" in url for url in settings.urls()[1:]) or len(settings.urls()) == 1
+    assert settings.open_to_network is False
+    share = settings.share_url()
+    if share:
+        assert f"key={settings.access_key}" in share
+
+
+def test_an_older_settings_file_adopts_the_shared_default(tmp_path):
+    # A file written before sharing became the default predates the choice.
+    path = settings_module.settings_path(tmp_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"lan_enabled": False, "lan_require_key": True, "port": 8765}))
+    settings = settings_module.load(tmp_path)
+    assert settings.lan_enabled is True
+    assert settings.lan_require_key is False
+    assert settings.version == settings_module.SETTINGS_VERSION
+
+
+def test_a_deliberate_choice_survives_the_default_changing(tmp_path):
+    path = settings_module.settings_path(tmp_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "lan_enabled": False, "lan_require_key": True, "network_chosen": True}))
+    settings = settings_module.load(tmp_path)
+    assert settings.lan_enabled is False
+    assert settings.lan_require_key is True
 
 
 def test_an_impossible_port_is_refused():
@@ -205,32 +252,52 @@ def test_settings_can_be_changed_over_the_api(client):
     result = client.post("/api/settings", json={"iterations": 7}).json()
     assert result["settings"]["iterations"] == 7
     assert result["restart_required"] is False
-    network = client.post("/api/settings", json={"lan_enabled": True}).json()
+    network = client.post("/api/settings", json={"lan_enabled": False}).json()
     assert network["restart_required"] is True
-    assert network["settings"]["access_key"]
+    assert network["settings"]["host"] == "127.0.0.1"
+    # Setting it by hand records the choice, so a later default change leaves
+    # it alone.
+    assert network["settings"]["network_chosen"] is True
     assert client.post("/api/settings", json={"port": 0}).status_code == 400
+
+
+def test_a_remote_client_reaches_a_shared_interface(tmp_path, fixture_root):
+    settings = settings_module.load(tmp_path / "home-shared")
+    settings_module.save(settings)
+    assert settings.lan_enabled is True and settings.lan_require_key is False
+    remote = TestClient(build_app(settings), client=("10.1.2.3", 5000))
+    response = remote.get("/api/state")
+    assert response.status_code == 200
+    assert response.json()["settings"]["open_to_network"] is True
 
 
 def test_a_remote_client_is_refused_while_local_only(tmp_path, fixture_root):
     settings = settings_module.load(tmp_path / "home2")
     settings.lan_enabled = False
+    settings.network_chosen = True
     settings_module.save(settings)
     remote = TestClient(build_app(settings), client=("10.1.2.3", 5000))
     response = remote.get("/api/state")
     assert response.status_code == 403
-    assert "Local-network access is off" in response.json()["error"]
+    assert "local only" in response.json()["error"].lower()
+    # The same build still answers the machine it runs on.
+    local = TestClient(build_app(settings), client=("127.0.0.1", 5000))
+    assert local.get("/api/state").status_code == 200
 
 
-def test_a_remote_client_needs_the_key_when_network_access_is_on(tmp_path):
+def test_a_remote_client_needs_the_key_when_one_is_required(tmp_path):
     settings = settings_module.load(tmp_path / "home3")
     settings.lan_enabled = True
     settings.lan_require_key = True
+    settings.network_chosen = True
     settings_module.save(settings.validate())
     app = build_app(settings)
     remote = TestClient(app, client=("10.1.2.3", 5000))
     assert remote.get("/api/state").status_code == 401
     assert remote.get(f"/api/state?key={settings.access_key}").status_code == 200
     assert remote.get("/api/state?key=wrong").status_code == 401
+    # A key is never asked of the machine FLYLAB is running on.
+    assert TestClient(app, client=("127.0.0.1", 5000)).get("/api/state").status_code == 200
 
 
 # ------------------------------------------------------------------ datasets

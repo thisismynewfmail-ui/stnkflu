@@ -4,10 +4,16 @@
     python3 startup.py
 
 Checks that the machine can run the platform, reports anything missing in
-plain language, and starts the interface. Nothing here touches the network
-except to open your browser at the local address.
+plain language, and starts the interface.
 
-    python3 startup.py --lan          reachable from other devices on this network
+The interface is shared on your local network by default: it listens on every
+interface, and the start-up banner prints the address to open from a phone or
+a laptop. That also means anyone who can reach this machine can drive its GPIO
+pins, move its pointer and start programs on it. Use --local-only to keep it to
+this machine, or --key to require an access key from other devices.
+
+    python3 startup.py --local-only   this machine only
+    python3 startup.py --key          require an access key over the network
     python3 startup.py --port 9000    listen somewhere else
     python3 startup.py --check        run the checks and stop
     python3 startup.py --fixture      build the synthetic bench fixture and start
@@ -102,11 +108,13 @@ def main():
     )
     parser.add_argument("--port", type=int, help="Port to listen on (default 8765)")
     parser.add_argument("--lan", action="store_true",
-                        help="Allow other devices on this network to connect")
+                        help="Share on this network (the default)")
     parser.add_argument("--local-only", action="store_true",
-                        help="Force local-only access for this run")
+                        help="This machine only: bind loopback and refuse everything else")
+    parser.add_argument("--key", action="store_true",
+                        help="Require an access key from other devices on the network")
     parser.add_argument("--no-key", action="store_true",
-                        help="Do not require an access key over the network")
+                        help="Require no access key (the default)")
     parser.add_argument("--no-browser", action="store_true", help="Do not open a browser")
     parser.add_argument("--workspace", type=Path, help="Where projects, models and settings live")
     parser.add_argument("--data", type=Path, help="Dataset directory to use")
@@ -140,12 +148,20 @@ def main():
     settings = settings_module.load(args.workspace)
     if args.port:
         settings.port = args.port
+    # A flag on the command line is a deliberate choice, so it is recorded as
+    # one and survives any later change to the shipped default.
     if args.lan:
         settings.lan_enabled = True
+        settings.network_chosen = True
     if args.local_only:
         settings.lan_enabled = False
+        settings.network_chosen = True
+    if args.key:
+        settings.lan_require_key = True
+        settings.network_chosen = True
     if args.no_key:
         settings.lan_require_key = False
+        settings.network_chosen = True
     if args.no_browser:
         settings.open_browser = False
     if args.data:

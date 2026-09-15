@@ -474,14 +474,19 @@ FL.refreshStatus = () => {
       el('span', { id: 'link-text', text: 'LINK' })),
       { title: 'Live connection',
         body: 'The browser holds an open connection for telemetry. If it drops, the interface reconnects on its own.' }),
-    FL.tipify(el('div', { class: 'stat' },
+    FL.tipify(el('div', { class: 'stat', onclick: () => FL.go('settings'), style: 'cursor:pointer' },
       el('span', { class: `lamp ${(state.settings || {}).lan_enabled ? 'warn' : 'ok'}` }),
-      el('span', { text: (state.settings || {}).lan_enabled ? 'ON NETWORK' : 'LOCAL ONLY' })),
+      el('span', { text: (state.settings || {}).lan_enabled ? 'SHARED ON NETWORK' : 'LOCAL ONLY' })),
       { title: 'Who can reach this interface',
         body: (state.settings || {}).lan_enabled
-          ? 'Other devices on this network can open this interface. It can drive GPIO pins, move the pointer and start programs on this machine.'
-          : 'Only this computer can open this interface.',
-        meta: 'Change it in Settings' }),
+          ? ((state.settings || {}).lan_require_key
+            ? 'Shared on this network, with an access key required from other devices.'
+            : 'Shared on this network with no access key. Anyone who can reach this machine can drive its GPIO pins, move its pointer and start programs on it.')
+          : 'Local only. Nothing outside this machine can connect.',
+        extra: (state.settings || {}).share_url
+          ? `Open it elsewhere at ${(state.settings || {}).share_url}`
+          : '',
+        meta: 'Click to open Settings' }),
   );
   FL.setLink(!!FL.linked);
 };

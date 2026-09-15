@@ -56,20 +56,39 @@ The mouse, keyboard and shell blocks act on the machine hosting FLYLAB. Shell ou
 
 ## Reaching it from another device
 
-FLYLAB listens on `127.0.0.1` only, unless you turn on **Settings → Reachable on this network**. Turning that on binds it for the local network and generates an access key, required unless you also turn the key off.
+FLYLAB binds `0.0.0.0` by default — every interface — so it is reachable at this machine's own address as well as at `127.0.0.1`. The start-up banner prints the address to use:
 
-Both halves are enforced: the listening address follows the setting when FLYLAB starts, and every request and socket is checked against the current setting as it arrives. Turning network access off locks out remote devices immediately, without a restart.
+```
+====================================================================
+  Open from any device on this network:
+      http://192.168.1.42:8765/
+  On this machine:  http://127.0.0.1:8765/
+====================================================================
+  Listening on every interface (0.0.0.0:8765).
+  No access key is required. Anyone who can reach this machine on
+  the network can drive its GPIO pins, move its pointer and start
+  programs on it. Use --local-only, or Settings, to close it down.
+```
+
+That default exists because the machine FLYLAB usually runs on has no screen: a Raspberry Pi wired to a robot, opened from a laptop or a phone on the same network. The address is also on the Settings page with a button that copies it.
+
+**The exposure is real and unauthenticated.** This interface drives GPIO pins, moves the pointer and starts programs on the host. Treat the network it sits on as the security boundary, because with the shipped defaults that is exactly what it is.
+
+Three ways to narrow it:
 
 ```sh
-python3 startup.py --lan                 # reachable, key required
-python3 startup.py --lan --no-key        # reachable, no key: only on a trusted network
-python3 startup.py --local-only          # force local for this run
+python3 startup.py --local-only          # loopback only; every other client refused
+python3 startup.py --key                 # stay shared, require a key in the address
 python3 startup.py --port 9000 --no-browser
 ```
 
-The address with the key is shown on the Settings page and in the terminal at start-up. A new key locks out every device using the old one immediately.
+Both halves are enforced. The listening address follows the setting when FLYLAB starts, and every request and every socket is checked against the *current* setting as it arrives — so switching to local-only in Settings locks out remote devices at once, without a restart, even though the socket stays bound until the next start.
 
-This interface can drive GPIO pins, move the pointer and start programs on the machine hosting it. Exposing it is a decision about who you trust on that network, not a convenience toggle. It is not authentication in any serious sense: a single shared key over plain HTTP is appropriate for a workshop network and nothing more.
+When a key is required it appears on the Settings page and in the terminal, and the shared address carries it as `?key=...`; the browser keeps it in a cookie afterwards. Connections from the machine FLYLAB is running on never need it. Generating a new key locks out every device using the old address immediately.
+
+A single shared key over plain HTTP is not authentication in any serious sense. It is appropriate for a workshop network and nothing more. Do not put this on a network you do not control, and do not forward the port to the internet.
+
+Your choice is remembered. Setting the toggles by hand — in Settings, or with `--lan`, `--local-only`, `--key` or `--no-key` — records that you chose them, and a later change to the shipped default will leave them alone.
 
 ## The workspace
 
