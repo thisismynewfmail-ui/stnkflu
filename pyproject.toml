@@ -3,27 +3,30 @@ requires = ["setuptools>=80"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "stonkfly"
-version = "0.1.0"
-description = "An experimental fly-connectome controller with guarded Coinbase AgentKit trading actions"
+name = "flylab"
+version = "1.0.0"
+description = "A connectome workflow platform: a fly's reconstructed nervous system wired to a computer's inputs and outputs"
 requires-python = ">=3.11"
 dependencies = [
-  "coinbase-agentkit==0.7.4", "coinbase-advanced-py==1.8.4",
   "numpy==2.4.6", "pandas==3.0.5", "pyarrow==25.0.1", "Pillow==12.3.0",
-  "pydantic==2.13.5", "python-dotenv==1.2.3"
+  "fastapi==0.141.1", "uvicorn[standard]==0.53.0", "pydantic==2.13.5",
 ]
 
 [project.optional-dependencies]
 test = ["pytest==9.1.1"]
+vision = ["mss==10.1.0", "opencv-python-headless==4.12.0.88"]
+hardware = ["pyserial==3.5", "gpiozero==2.0.1"]
+desktop = ["pynput==1.8.2", "sounddevice==0.5.3"]
 
 [project.scripts]
-stonkfly = "stonkfly.cli:main"
+flylab = "flylab.__main__:main"
 
 [tool.setuptools.packages.find]
-include = ["stonkfly*"]
+include = ["flylab*"]
 
 [tool.setuptools.package-data]
-"stonkfly.neural" = ["*.cpp", "*.json"]
+"flylab.neural" = ["*.cpp", "*.json"]
+"flylab.web" = ["*.html", "*.css", "*.js", "*.svg"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

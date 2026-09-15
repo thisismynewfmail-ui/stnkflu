@@ -1,55 +1,96 @@
-# Running and stopping Stonkfly
+# Running FLYLAB
 
-Use a dedicated account portfolio. Stonkfly is an experiment capable of losing its entire allocated balance. The funding cap is **100 USDC at initialization**, not an assertion that USDC always equals one dollar.
+FLYLAB is a local program. It runs on your machine, keeps everything in a folder you control, and contacts nothing on your behalf except the connectome download you ask for.
 
-## Installation and data
+## Installation
 
-Use Python 3.11 and a C++17 compiler (`clang++`/`c++` on macOS, GCC or Clang on Linux). `python -m stonkfly prepare` downloads about 1.1 GB of upstream data, verifies it, and builds the full graph. Allow several additional GB for dependencies, derived data and two checkpoints. `python -m stonkfly verify` independently checks prepared inputs. Set `STONKFLY_DATA` to use another data location.
-
-Existing DOOMFLY researchers can reuse verified local files with `python -m stonkfly prepare --reuse-doomfly /path/to/working-copy`. Stonkfly copies only the three required data artifacts, then checks the same locks. It does not import a Doom environment, run its website, or depend on that checkout afterward.
-
-## Paper modes
+Python 3.11 or newer and a C++17 compiler (`clang++`/`c++` on macOS, GCC or Clang on Linux and Raspberry Pi OS). The compiler is needed once, to build the simulation kernel.
 
 ```sh
-# Real public prices; simulated fills and 0.6% fee per side.
-python -m stonkfly run --steps 10
-
-# Explicit synthetic offline market, accelerated development run.
-python -m stonkfly run --fixture --fast --steps 10 --out runs/fixture
-
-# Frozen-memory control, always in a separate run directory.
-python -m stonkfly run --fixture --fast --frozen --steps 10 --out runs/frozen
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python3 startup.py --check     # report what is present and what is missing
+python3 startup.py             # start the interface
 ```
 
-`--fast` skips wall waits only in paper mode. It preserves the 0.1 ms neural timestep and the real 60-second execution cooldown, so an accelerated probe can have many rejected trades. This is a plumbing/neural test, not a backtest of achievable market returns. Paper fills use observed bid/ask plus the configured fee; they do not simulate depth, queue position or all market impact. `--fixture` never claims real market data.
+`startup.py --install` installs the required packages first. Hardware packages are optional and listed separately: install only what your machine actually has. A block that needs a missing one names the package rather than failing obscurely.
 
-## Coinbase setup, performed by you
+## The dataset
 
-1. Create a separate Coinbase Advanced portfolio and put up to 100 USDC in it. Start without other assets or open orders. Do not mix other bots, manual trades or deposits into that portfolio while Stonkfly runs.
-2. Create a [Coinbase App API key](https://docs.cdp.coinbase.com/coinbase-app/authentication-authorization/api-key-authentication) with ECDSA, **View and Trade**, **Transfer disabled**, scoped only to that portfolio. The program checks permissions and portfolio scope; an account-wide key is rejected.
-3. Save the downloaded key JSON locally as `coinbase-key.json` and restrict its file permissions (`chmod 600 coinbase-key.json`). It typically contains `name` and `privateKey`. Never paste the key into a commit or README.
-4. Copy `.env.example` to `.env`, set the key path and `COINBASE_PORTFOLIO_ID`, then set `STONKFLY_LIVE=I_ACCEPT_REAL_TRADES`. The CLI also requires `--live`; paper mode never submits an order even if the environment variable is present.
-5. Run `python -m stonkfly run --live --preflight-only`. This reads permissions, account balances and order state, and initializes the local ledger. **It does not submit orders.** Once you have reviewed the configuration, run `python -m stonkfly run --live` yourself.
+`python3 startup.py --fixture` builds a small synthetic graph so you can learn the interface immediately. It is randomly wired and tells you nothing about flies; the interface says so permanently while it is loaded, and every file it produces is stamped `synthetic_fixture`.
 
-The key must be allowed to trade the requested pairs in your region. Defaults use BTC-USDC; ETH-USDC and SOL-USDC are optional via `--products`. Only available spot products pass checks. Coinbase preview warnings, unsupported order types or insufficient fee coverage stop the order; there is no fallback to an unbounded market order.
+For the real thing, open **Housekeeping → Download and prepare**, or run `python3 -m flylab prepare`. About 1.1 GB is downloaded, each file is checked against the SHA-256 lock committed here, the annotations are normalised and the graph is compiled. Allow around 4 GB of free space in total and several minutes; a Raspberry Pi will take considerably longer.
 
-## Execution guarantees and limits
+`python3 -m flylab verify` re-checks a prepared dataset at any time: source checksums, every compiled array against its lock, transmitter annotations, and neuron ordering. A mismatch stops with the name of the file that failed. Nothing is installed from a download that does not match.
 
-- Maximum initial funding: 100 USDC. Maximum buy commitment: 10 USDC including a 2% fee reserve. Sell quantity is capped by owned inventory and 10 USDC observed notional; a better execution price can yield slightly more proceeds. No borrowing, shorting, transfers or leverage actions are exposed.
-- At most 24 order attempts per UTC day and at least 60 seconds between attempts. Rejected previews count. Failed orders do not become new strategy choices.
-- Price-bounded fill-or-kill orders use at most 0.5% slippage and 0.5% spread. Quotes must be no older than 15 seconds. A fresh book is fetched after neural integration; a move beyond the observation tolerance vetoes the trade. Preview fees, account balances and the STOP condition are checked before submission.
-- At 20 USDC drawdown from starting equity, **stop new orders**. This is not a liquidation order or guaranteed maximum loss. Existing holdings remain exposed; price moves between observations can exceed the threshold. Decide separately how you want to manage those holdings.
-- SQLite records a unique client order ID before submission. An uncertain response stays unresolved; the worker searches the exchange for that same ID instead of sending a new order. Missing/ambiguous results stop the worker for manual review. Final fills and fees settle exactly once. Unexpected actual fees are booked, then further orders halt.
-- The local process lock prevents two workers using one run directory. It does not coordinate multiple computers or copied ledgers. Run one worker for the dedicated portfolio, and do not delete the live ledger to bypass checks.
+Datasets live in `~/.flylab/datasets/` by default. `--workspace` moves the whole workspace; `FLYLAB_DATA` points at a dataset directory; `FLYLAB_CACHE` moves the compiled kernel.
 
-## State, recovery and privacy
+## Loading a network
 
-The worker must stay running on your computer/server. It is not a hosted service. Prevent laptop sleep if you want uninterrupted observations. Closing it preserves committed neural state and memory.
+Open **Status** and press *Load* beside a dataset. Loading reads the graph, compiles the kernel if its source has changed, resolves every channel against the annotations, and builds the viewport layout. On the full release this takes a minute and a few gigabytes of memory; 16 GB is a comfortable amount.
 
-`runs/<name>/` holds a SQLite ledger, two alternating checkpoints, `events.jsonl`, `latest.json`, `latest-input.png`, and provenance with exact code, graph, stimulus and parameter hashes. Each intent binds to the preceding neural observation and checkpoint. The ledger is authoritative if a crash occurs before the human-readable log is written.
+One process runs one dataset at a time. Switching datasets means unloading and loading again, which is deliberate: a fixture and a real release can never be mixed inside one run.
 
-To stop: Ctrl-C, or `touch runs/live/STOP` (`runs/paper/STOP` for paper). This stops future decisions/submissions; an already submitted FOK order may still finish. Inspect any uncertain order in Coinbase before taking another action.
+## Running a workflow
 
-For an ordinary clean restart, use the same command and run directory. After reviewing a transient failure and reconciling account state, remove the STOP file if appropriate and pass `--resume-reviewed`. This cannot clear a drawdown or fee-overrun stop, bypass unresolved exchange outcomes, or accept changed source/configuration. A missing unknown order requires manual exchange investigation; do not assume it failed. Source changes require an explicitly reviewed state migration; use a fresh **paper** directory for development.
+Press **Run** on the Workflow page. The run settings decide how many iterations happen, whether there is a time limit, how long to wait between iterations, whether synapses may change, whether missing hardware is simulated, and whether the first error ends the run.
 
-All runtime state, balances, account IDs, data, `.env` and the default key filenames are git-ignored. Keep custom key paths outside the repository. Tests use doubles and never submit real orders. No live account credentials or real balances are bundled.
+A run stops for exactly one reason and always says which: the iteration count finished, a Stop block ran, the goal was reached, the time limit was hit, someone pressed Stop, a block failed, or the workflow had errors that prevented it starting.
+
+Everything a run produces goes into `~/.flylab/projects/<project>/runs/<run>/`: a summary, the log as JSONL, any files the workflow wrote, and `provenance.json` — the exact configuration, compartment selection, graph checksums and source-file hashes the run used.
+
+Stop with the Stop button, or by closing the program. Neural state stays in memory until the network is unloaded; save a model if you want to keep it.
+
+## Hardware
+
+Raspberry Pi pins are **3.3 V**. A 5 V signal on an input can destroy the board, and so can drawing motor current from a pin. Use a driver board for anything with a motor in it, and a divider or level shifter on an HC-SR04 echo line.
+
+Pins are addressed by BCM number — the numbers in a pinout diagram — and the interface shows the physical header position beside each. Pins that are not general-purpose on a 40-pin header are refused.
+
+Before connecting a servo to a real mechanism, set its travel limits on the block. A servo will stall itself against a hard stop indefinitely.
+
+**Turn on device simulation first.** A simulated device keeps state in memory, returns plausible values and records every write, so a workflow can be built and stepped through before it touches anything. Simulated values are labelled everywhere they appear, including in the saved run log, so a simulated result can never be mistaken for a real one.
+
+The mouse, keyboard and shell blocks act on the machine hosting FLYLAB. Shell output is disabled until a block explicitly enables it, because a workflow that can run programs can do anything your user account can.
+
+## Reaching it from another device
+
+FLYLAB listens on `127.0.0.1` only, unless you turn on **Settings → Reachable on this network**. Turning that on binds it for the local network and generates an access key, required unless you also turn the key off.
+
+Both halves are enforced: the listening address follows the setting when FLYLAB starts, and every request and socket is checked against the current setting as it arrives. Turning network access off locks out remote devices immediately, without a restart.
+
+```sh
+python3 startup.py --lan                 # reachable, key required
+python3 startup.py --lan --no-key        # reachable, no key: only on a trusted network
+python3 startup.py --local-only          # force local for this run
+python3 startup.py --port 9000 --no-browser
+```
+
+The address with the key is shown on the Settings page and in the terminal at start-up. A new key locks out every device using the old one immediately.
+
+This interface can drive GPIO pins, move the pointer and start programs on the machine hosting it. Exposing it is a decision about who you trust on that network, not a convenience toggle. It is not authentication in any serious sense: a single shared key over plain HTTP is appropriate for a workshop network and nothing more.
+
+## The workspace
+
+```
+~/.flylab/
+  settings.json             every setting, as plain JSON
+  datasets/                 downloaded and compiled connectome data
+  models/                   the model library, with checkpoints under files/
+  projects/<id>/
+    project.json            name, notes, run settings, model it resumes from
+    workflow.json           the canvas
+    history.json            every run this project has done
+    runs/<run>/             summary, log, provenance, anything the workflow wrote
+```
+
+Everything is plain JSON beside its files. It stays readable without this program and it is safe to back up, move, or put under version control.
+
+## Recovery
+
+A model checkpoint records the exact graph, compartment selection and parameters it came from. Loading it into a network that differs in any of those is refused with the mismatch named, not approximated.
+
+If the interface will not start, `python3 startup.py --check` reports what is missing. If a dataset behaves strangely, `python3 -m flylab verify` re-checks it against the locks. If a device stops responding, **Bench → Re-check** re-imports every driver and re-lists serial ports.
+
+If a run leaves hardware in an unwanted state, that is the workflow's responsibility: a network in the loop is not a substitute for a limit switch, a fuse, or a stop block that runs before anything moves.
