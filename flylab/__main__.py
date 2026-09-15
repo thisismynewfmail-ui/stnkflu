@@ -20,9 +20,14 @@ def main(argv=None):
 
     serve = sub.add_parser("serve", help="Run the interface (the default)")
     serve.add_argument("--port", type=int, help="Port to listen on")
-    serve.add_argument("--lan", action="store_true", help="Allow other machines on this network to connect")
-    serve.add_argument("--local-only", action="store_true", help="Force local-only access for this run")
-    serve.add_argument("--no-key", action="store_true", help="Do not require an access key on the local network")
+    serve.add_argument("--lan", action="store_true",
+                       help="Share on this network (the default)")
+    serve.add_argument("--local-only", action="store_true",
+                       help="This machine only: bind loopback and refuse everything else")
+    serve.add_argument("--key", action="store_true",
+                       help="Require an access key from other devices on the network")
+    serve.add_argument("--no-key", action="store_true",
+                       help="Require no access key (the default)")
     serve.add_argument("--no-browser", action="store_true", help="Do not open a browser window")
     serve.add_argument("--workspace", type=Path, help="Where projects, models and settings live")
     serve.add_argument("--data", type=Path, help="Dataset directory to load at start-up")
@@ -73,12 +78,20 @@ def main(argv=None):
     settings = settings_module.load(args.workspace)
     if args.port:
         settings.port = args.port
+    # A flag on the command line is a deliberate choice, so it is recorded as
+    # one and survives any later change to the shipped default.
     if args.lan:
         settings.lan_enabled = True
+        settings.network_chosen = True
     if args.local_only:
         settings.lan_enabled = False
+        settings.network_chosen = True
+    if args.key:
+        settings.lan_require_key = True
+        settings.network_chosen = True
     if args.no_key:
         settings.lan_require_key = False
+        settings.network_chosen = True
     if args.no_browser:
         settings.open_browser = False
     if args.data:
@@ -102,22 +115,32 @@ def run_server(settings):
 
 
 def banner(settings):
-    line = "=" * 64
+    line = "=" * 68
+    share = settings.share_url()
     print(line)
     print("  FLYLAB - connectome workflow platform")
     print(line)
-    for url in settings.urls():
-        print(f"  {url}")
-    if settings.lan_enabled:
-        print("  Reachable from this network. This interface can drive GPIO pins,")
-        print("  move the pointer and start programs on this machine.")
-        if settings.lan_require_key:
-            print(f"  Access key: {settings.access_key}")
-        else:
-            print("  WARNING: no access key is required.")
+    if share:
+        print("  Open from any device on this network:")
+        print(f"      {share}")
+        for url in settings.urls():
+            if url != share and "127.0.0.1" not in url:
+                print(f"      {url}")
+        print(f"  On this machine:  http://127.0.0.1:{settings.port}/")
     else:
-        print("  Local only. Turn on network access in Settings to reach it from")
-        print("  another device.")
+        print(f"  Open on this machine only:  http://127.0.0.1:{settings.port}/")
+    print(line)
+    if settings.lan_enabled:
+        print(f"  Listening on every interface ({settings.host}:{settings.port}).")
+        if settings.lan_require_key:
+            print(f"  An access key is required from other devices: {settings.access_key}")
+        else:
+            print("  No access key is required. Anyone who can reach this machine on")
+            print("  the network can drive its GPIO pins, move its pointer and start")
+            print("  programs on it. Use --local-only, or Settings, to close it down.")
+    else:
+        print("  Local only: nothing outside this machine can connect.")
+        print("  Start with --lan, or use Settings, to share it on this network.")
     print(f"  Workspace: {settings.workspace}")
     print(line, flush=True)
 
