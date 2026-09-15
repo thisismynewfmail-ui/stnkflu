@@ -1,0 +1,37 @@
+# FLYLAB - connectome workflow platform
+#
+#   python3 -m pip install -r requirements.txt
+#
+# Everything above the first divider is needed to start. Everything below it
+# is for a particular piece of hardware; install only what you actually have.
+# A block that needs a missing package says which one, by name, instead of
+# failing obscurely.
+
+# --- required ------------------------------------------------------------
+numpy==2.4.6              # arrays and maths throughout the simulator
+pandas==3.0.5             # reading the connectome's annotation tables
+pyarrow==25.0.1           # reading the released Feather files
+Pillow==12.3.0            # encoding pictures for the interface
+fastapi==0.141.1          # the local web service
+uvicorn[standard]==0.53.0 # serving it, including the telemetry socket
+pydantic==2.13.5          # checking values arriving from the interface
+
+# --- optional: vision ----------------------------------------------------
+# mss==10.1.0                       # screen-region capture (X11, Windows, macOS)
+# opencv-python-headless==4.12.0.88 # cameras and video files
+# playwright==1.56.0                # rendering a web page with no desktop
+#                                   # then: playwright install chromium
+
+# --- optional: hardware --------------------------------------------------
+# pyserial==3.5             # serial ports: Arduino, motor drivers, sensors
+# gpiozero==2.0.1           # Raspberry Pi GPIO (recommended)
+# lgpio==0.2.2.0            # GPIO backend for Raspberry Pi OS Bookworm and later
+# RPi.GPIO==0.7.1           # GPIO backend for older Raspberry Pi OS releases
+
+# --- optional: desktop and messaging -------------------------------------
+# pynput==1.8.2             # moving the pointer and pressing keys
+# sounddevice==0.5.3        # microphone input
+# paho-mqtt==2.1.0          # publishing to an MQTT broker
+
+# --- optional: development -----------------------------------------------
+# pytest==9.1.1             # the test suite

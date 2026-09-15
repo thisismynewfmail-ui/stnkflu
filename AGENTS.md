@@ -1,8 +1,11 @@
-# Stonkfly
+# FLYLAB
 
-- Preserve the full retained MaleCNS v1.0 graph. No pruning, scripted trades presented as neural output, LLM trading policy, or hidden profit-based action selection.
-- Separate market observations, sensory proxies, neural propagation, plasticity, fixed decoding, and execution limits. The risk guard may reject an order; it must never choose a replacement trade.
-- Profit/loss reinforcement is an engineered input to identified dopamine cells. Do not claim modeled pain, pleasure, consciousness, or validated profitable learning.
-- Paper execution is the default. Never place real trades while testing. Credentials, account identifiers, balances, logs, checkpoints and data stay ignored.
-- Use Decimal quantities and persist order intent before sending it. Unknown exchange outcomes stop execution until reconciliation; never blindly retry a trade.
-- Keep README short. Detailed model and execution caveats belong in docs.
+- Preserve the full retained MaleCNS v1.0 graph. No pruning, no scripted behaviour presented as neural output, no language model in the loop, no hidden selection of a more flattering result.
+- Keep the layers separate: device input, sensory encoding, neural propagation, plasticity, fixed decoding, and actuation. A guard may refuse an action; it must never choose a different one.
+- Reinforcement is an engineered current injection into identified dopaminergic cells. Do not claim modelled pain, pleasure, experience, consciousness, or validated learning.
+- Every channel, block, port and setting carries three things: the technical term, what it literally does, and what happens when you use it. A block with a parameter that has no hover tip does not load.
+- A channel absent from the loaded release is reported as absent. A missing driver names the package that installs it. Never substitute an invented value for a real one.
+- Simulated devices are opt-in and labelled everywhere their values appear, including in saved run logs. The synthetic fixture stamps `synthetic_fixture` into telemetry, checkpoints and exported results, and the interface shows a permanent banner.
+- The interface is local-only by default. Network access generates an access key and is enforced both at bind time and per request. It can drive GPIO, the pointer and local programs; treat exposure as a decision, not a convenience.
+- Shell output stays disabled until a workflow explicitly enables it. Expression evaluation is an allow-list, never a sandbox.
+- Keep README short. Detailed model and operation caveats belong in docs.

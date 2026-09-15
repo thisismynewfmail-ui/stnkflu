@@ -1,39 +1,65 @@
-![Stonkfly: a pixel fly beside a candlestick chart](assets/stonkfly.png)
+![FLYLAB](assets/flylab.png)
 
-# Stonkfly
+# FLYLAB
 
-A fly-connectome simulation that can operate a crypto trading account. Actual neural output, actual Coinbase integration. Profitable learning has not been demonstrated.
+A fly's reconstructed nervous system, wired to a computer's inputs and outputs, doing whatever you draw on a canvas.
 
-**How it works:** Public Coinbase prices become an RGB chart. It stimulates 3,335 brightness inputs and 811 R8 color inputs in the retained **MaleCNS v1.0 graph: 166,700 neurons, 25.6 million connections**. A fixed neural readout proposes buy, sell or hold. A custom **Coinbase AgentKit ActionProvider** checks limits and places spot orders through Coinbase Advanced.
+The **retained MaleCNS v1.0 graph — 166,700 neurons, 25.6 million connections** — sits between what this machine can sense and what it can drive. You decide what reaches which cells, how long the network runs, and what its activity does next. Screenshots and camera frames go into the photoreceptors. Distance sensors go into mechanosensory cells. The descending neurons a fly walks with come back out as GPIO pins, serial commands, servo angles and pointer movements.
 
-Positive portfolio P&L stimulates 15 identified PAM11 dopamine cells; negative P&L stimulates two PPL101 aversive dopamine cells. A candidate memory rule changes existing KC-to-MBON connections. These are engineered reinforcement signals, **not modeled pain receptors**. Synaptic changes do not establish that it learns to trade profitably. [Model and evidence](docs/model.md).
+**What is and is not modelled:** the connectome supplies anatomy. It does not supply dynamics, receptor identity, most neuromodulation, or behaviour. Teaching pulses are engineered current injections into identified dopaminergic cells — not rewards, not punishments, and nothing is experienced. No useful learning has been demonstrated. [Model and evidence](docs/model.md).
 
 ## Run it
 
-Python 3.11, a C++17 compiler, macOS/Linux. Allow several GB for the dataset and dependencies; 16 GB RAM recommended.
+Python 3.11, a C++17 compiler, macOS/Linux/Raspberry Pi. Allow several GB for the dataset; 16 GB RAM recommended for the full release.
 
 ```sh
-python3.11 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install -e '.[test]'
-python -m stonkfly prepare
-python -m stonkfly run
+pip install -r requirements.txt
+python3 startup.py
 ```
 
-Default: **paper trades, real public BTC-USDC data, $100 simulated balance**. No key needed. Local logs, sensory images and resumable brain state go in `runs/paper/`. Ctrl-C stops it; the same command resumes.
+`startup.py` checks the machine, reports anything missing in plain language, starts the interface at **http://127.0.0.1:8765/** and opens a browser. `python3 startup.py --check` runs the checks and stops.
 
-For real orders, first create a dedicated Coinbase Advanced portfolio with **at most 100 USDC** and a portfolio-scoped **ECDSA API key with View + Trade, no Transfer**. Copy `.env.example` to `.env`, fill it in locally, then run these commands yourself:
+To try the software before downloading 1.1 GB, `python3 startup.py --fixture` builds a small randomly wired test graph with the same shape. Everything works; every number it produces is labelled synthetic, because it is.
+
+For the real thing, open **Housekeeping** and press *Download and prepare*. Three released files are fetched, checked against SHA-256 locks committed here, normalised and compiled. Then load it from **Status**.
+
+## What the interface does
+
+| Page | What it is for |
+| --- | --- |
+| **Status** | What is loaded, what this machine can reach, what ran last |
+| **Projects** | Saved work: a workflow, its settings, and the model it resumes from |
+| **Workflow** | The node canvas: 70 block types across inputs, vision, encoding, the network, readouts, logic, outputs, and goals |
+| **Network** | Live activity across the whole graph, and every one of its 54 named channels |
+| **Bench** | Drive one channel, read another, test hardware — without running a workflow |
+| **Training** | Training schedules, and the controls any learning claim has to be compared against |
+| **Models** | Label, annotate and reload what the network has learned |
+| **Housekeeping** | Download, verify, build the fixture, check dependencies |
+| **Settings** | Session and run defaults, interface options, and who may reach this interface |
+
+Every control describes itself on hover: the technical term, what it literally does, and what happens when you use it.
+
+## What can go in and come out
+
+Sensory channels address the real cells by their published type annotations: R1–R6 brightness, R7 ultraviolet, R8 colour, ocelli, olfactory receptor neurons, sugar and bitter taste, Johnston's organ, bristle mechanoreceptors, femoral chordotonal organs, campaniform sensilla, thermo- and hygrosensors, nociceptors, ascending neurons. Readouts address descending neurons, leg, wing, neck and proboscis motor neurons, mushroom-body output neurons, and the central complex's heading and steering populations. Teaching signals go to PAM and PPL1 dopaminergic clusters, octopaminergic and serotonergic cells.
+
+Devices: screen regions, cameras, video and image files, headless web pages, microphones, serial ports, Raspberry Pi GPIO (digital in and out, PWM, servos, HC-SR04 range finders, edge waiting), the mouse and keyboard, HTTP, UDP, MQTT, files.
+
+A channel that is absent from the loaded dataset is reported as absent. A device that is not installed names the package that would install it. Nothing is invented to fill a gap.
+
+## Over the network
+
+The interface is local-only by default. **Settings → Reachable on this network** binds it for other devices and generates an access key, which is required unless you turn that off. Both the socket binding and a per-request check enforce the current setting.
+
+Think about it before turning it on: this interface can drive GPIO pins, move the pointer and start programs on the machine hosting it.
 
 ```sh
-python -m stonkfly run --live --preflight-only
-python -m stonkfly run --live
+python3 startup.py --lan          # reachable from this network, key required
+python3 -m flylab devices         # what hardware this machine can reach
+python3 -m flylab verify          # re-check a prepared dataset
+python3 -m pytest -q              # 112 tests, no dataset needed
 ```
 
-Defaults: $10 maximum order including reserved fees, 24 attempts/day, no shorts or leverage. A $20 drawdown stops new orders; **it does not liquidate holdings or cap further losses**. [Operation and recovery](docs/operations.md).
-
-```sh
-python -m stonkfly status
-python -m pytest -q
-```
-
-The repo does not come funded or connected to anyone’s account. Live execution needs your local credentials and explicit opt-in.
+The repository ships no data and contacts no service on your behalf. Projects, models and settings live in `~/.flylab` as plain JSON beside their files.

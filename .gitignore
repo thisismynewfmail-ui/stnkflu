@@ -4,6 +4,8 @@
 !.env.example
 data/
 runs/
+workspace/
+data-fixture/
 *.key
 *.pem
 *.npz
@@ -18,6 +20,4 @@ __pycache__/
 dist/
 build/
 .DS_Store
-coinbase-key.json
-cdp_api_key.json
 *.partial

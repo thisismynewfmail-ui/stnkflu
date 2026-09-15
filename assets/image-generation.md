@@ -1,7 +1,19 @@
-# Stonkfly artwork
+# FLYLAB artwork
 
-Generated with the built-in image generation tool for this repository. Final asset: `assets/stonkfly.png`. The chart is decorative concept art, not a trading result.
+`assets/flylab.png` is drawn entirely from code by `assets/make_hero.py`:
 
-## Final prompt
+```sh
+python3 assets/make_hero.py
+```
 
-Use case: stylized-concept. Asset type: wide GitHub repository hero, approximately 2:1 landscape. Create beautiful crisp hand-crafted 8-bit/16-bit pixel art for a project named STONKFLY. Use the attached image ONLY as a character reference: the same gray fruit fly with large dark ruby red compound eyes, six delicate legs and translucent silver veined wings. No desk or monitor from the reference. Place this fly in a strong three-quarter side pose on the left half, fully visible, wings angled gracefully backward. Black and midnight-navy background. Behind it, restrained cyan/green and coral/red candlestick chart bars with fine deep-blue grid, without any axis labels or profits. Sparse electric cobalt-blue rim lighting, a few pixel glints. On the right, exact text STONKFLY in bold white block-pixel lettering. Below in smaller pixel lettering: A FLY-CONNECTOME TRADING EXPERIMENT. Visually polished, playful but scientific, stark high contrast, minimal composition, space around all elements, nice enough as a share card. Actual pixel blocks and intentional dithering, no smudged gradients, no photorealism, no Coinbase or third-party logos, no fake returns, no extra slogans, no terminal screenshots, no border. The only text should be the two specified strings.
+A 480x240 canvas is composed with Pillow and scaled up with nearest-neighbour
+sampling, so the image is made of real pixel blocks rather than a resized
+photograph. No external assets, no photography and no model-generated imagery
+are involved, which is why the script rather than a prompt is the record of how
+it was made.
+
+What it shows, left to right: a hexagonal lattice standing for the compound
+eye's ommatidia with a few columns lit; the pathway through lamina, medulla,
+mushroom body and the dopaminergic cells that write to it; and the outputs the
+platform can drive. The neuron and connection counts are the retained MaleCNS
+v1.0 figures this repository actually loads.

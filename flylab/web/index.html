@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FLYLAB</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div id="shell">
+  <nav id="rail">
+    <div class="mark" data-tip-title="FLYLAB" data-tip="A connectome workflow platform. A fly's nervous system, wired to this computer's inputs and outputs, doing whatever the workflow on the canvas says.">
+      <svg viewBox="0 0 32 32" fill="none" stroke="#ffb02e" stroke-width="1.3">
+        <circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="5.2"/>
+        <path d="M16 5v6M16 21v6M5 16h6M21 16h6"/>
+        <circle cx="16" cy="16" r="1.8" fill="#ffb02e" stroke="none"/>
+      </svg>
+    </div>
+    <div id="rail-buttons"></div>
+    <div class="spacer"></div>
+    <button class="rail-btn" id="rail-help"
+      data-tip-title="Hover help"
+      data-tip="Every control in this interface has a hover description like this one: what it is called technically, what it literally does, and what happens when you use it."
+      data-tip-meta="Turn it off in Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.2 2.4c-.6.2-.7.8-.7 1.3v.4"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg>
+      Help
+    </button>
+  </nav>
+
+  <div id="main">
+    <header id="topbar">
+      <div class="title">FLYLAB<small id="subtitle">connectome workflow platform</small></div>
+      <div class="grow"></div>
+      <div id="topbar-stats" class="row tight"></div>
+    </header>
+    <div id="fixture-banner">
+      <span class="lamp warn"></span>
+      <b>SYNTHETIC BENCH FIXTURE LOADED.</b>
+      <span>This is a randomly wired test graph, not the connectome. Every number produced
+        now describes the fixture and nothing biological.</span>
+    </div>
+    <main id="pages"></main>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div id="modal-back"><div id="modal"></div></div>
+<div id="toasts"></div>
+
+<script src="/static/app.js"></script>
+<script src="/static/viewport.js"></script>
+<script src="/static/editor.js"></script>
+<script src="/static/views.js"></script>
+<script>window.addEventListener('DOMContentLoaded', () => FL.boot());</script>
+</body>
+</html>
