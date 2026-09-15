@@ -3,7 +3,7 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  unit:
+  suite:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -12,7 +12,14 @@ jobs:
           python-version: '3.11'
           cache: pip
           cache-dependency-path: pyproject.toml
+      # The simulation kernel is compiled on first use; ubuntu-latest has g++.
       - run: pip install -e '.[test]'
-      - run: python -m pytest -q
+      - name: Start-up checks
+        run: python startup.py --check
+      - name: Test suite
+        run: python -m pytest -q
         env:
           OPENBLAS_NUM_THREADS: '1'
+      - name: Browser files parse
+        run: |
+          for f in flylab/web/*.js; do node --check "$f"; done
